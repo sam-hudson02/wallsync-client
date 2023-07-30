@@ -39,9 +39,7 @@ export class Config {
         this.wsServer = 'ws://' + config.server + ':' + this.ws_port
         this.restServer = 'http://' + config.server + ':' + this.rest_port
         this.name = config.name || this.getHostName();
-        console.log(`command: ${config.command}`);
         this.command = config.command || 'feh --bg-fill $WALL';
-        console.log(`command: ${this.command}`);
     }
 
     default() {

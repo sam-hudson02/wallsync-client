@@ -12,6 +12,11 @@ export class Client {
     routes: Route[];
     router: Router;
     dataQueue: Map<string, string>;
+    afterReady: () => void;
+    status: 'disconnected' | 'connecting' | 'connected';
+    conTimeout?: NodeJS.Timeout;
+    healthCheck?: NodeJS.Timeout;
+    lastPing?: number;
 
     constructor(config: Config) {
         this.config = config;
@@ -21,30 +26,144 @@ export class Client {
             { key: 'READYDATA', handler: this.onReadyData.bind(this) },
             { key: 'WALL', handler: this.incomingWall.bind(this) },
             { key: 'EXISTS', handler: this.onExists.bind(this) },
+            { key: 'ERROR', handler: this.onError.bind(this) },
         ];
         this.router = new Router(this.routes);
         this.dataQueue = new Map<string, string>();
+        this.afterReady = () => { };
+        this.status = 'connecting';
+    }
+
+    async start(tries: number = 0) {
+        try {
+            console.log('Attempting to Connect');
+            await this.connect();
+            console.log('Finished Connecting');
+            while (true) {
+                console.log(`Status: ${this.status}`);
+                if (this.status === 'connected') {
+                    tries = 0;
+                } 
+                if (this.status === 'disconnected') {
+                    console.log('Disconnected, breaking');
+                    break;
+                } 
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
+            console.log(`Connection Closed, status: ${this.status}`);
+        } catch (err) {
+            console.error(err);
+        }
+        let sleepTime = tries ** 2 * 1000;
+        // max sleep time of 10 minutes
+        if (sleepTime > 600000) {
+            sleepTime = 600000;
+        }
+        console.log(`Retrying in ${sleepTime / 1000} seconds`);
+        setTimeout(() => {
+            this.start(tries + 1);
+        }, sleepTime);
     }
 
     async connect() {
+        this.status = 'connecting';
         // connect
+        // timeout after 10 seconds
+        this.conTimeout = setTimeout(() => {
+            console.log('Connection timed out');
+            this.close();
+        }, 10000);
         console.log(`Connecting to ${this.config.wsServer}`);
-        const ws = new WebSocket(this.config.wsServer);
-        const onMessage = this.onMessage.bind(this);
-        ws.on('open', () => {
-            console.log('Connected');
-            const id = `ID: ${this.config.id}`;
-            const name = `NAME: ${this.config.name}`;
-            ws.send(id + '\n' + name);
-        });
-        ws.on('message', (data) => {
-            const message = data.toString();
-            onMessage(message);
-        });
-        this.ws = ws;
+        // delete ws if exists
+        if (this.ws) {
+            this.ws.close();
+            this.ws = undefined;
+        }
+        try {
+            const ws = new WebSocket(this.config.wsServer);
+            ws.on('error', this.sockError.bind(this));
+            ws.on('open', () => {
+                console.log('Connected');
+                const id = `ID: ${this.config.id}`;
+                const name = `NAME: ${this.config.name}`;
+                ws.send(id + '\n' + name);
+            });
+            ws.on('message', (data) => {
+                const message = data.toString();
+                console.log(`Received: ${message}`);
+                const commands = parseMessage(message);
+                for (const [key, data] of commands) {
+                    if (key == 'ID') {
+                        this.onId(data);
+                        this.wsReady(ws);
+                    } else if (key == 'ERROR') {
+                        this.onError(data);
+                        console.log('Error received setting status to disconnected');
+                        this.close();
+                    } else {
+                        console.log(`Unexpected message: ${key}`);
+                    }
+                }
+            });
+        } catch (err) {
+            console.error(err);
+            this.status = 'disconnected';
+            return;
+        }
     }
 
-    onMessage(message: string) {
+    onReady(handler: () => void) {
+        this.afterReady = handler;
+    }
+
+    close() {
+        this.lastPing = undefined;
+        if (this.healthCheck) {
+            clearInterval(this.healthCheck);
+            this.healthCheck = undefined;
+        }
+        if (this.conTimeout) {
+            clearTimeout(this.conTimeout);
+            this.conTimeout = undefined;
+        }
+        if (this.ws) {
+            if (this.ws.readyState === WebSocket.OPEN) {
+                this.ws.close();
+            }
+            this.ws = undefined;
+        }
+        this.status = 'disconnected';
+    }
+
+
+    wsReady(ws: WebSocket) {
+        if (this.conTimeout) {
+            clearTimeout(this.conTimeout);
+            this.conTimeout = undefined;
+        }
+        console.log('WebSocket authenticated');
+        this.status = 'connected';
+        this.lastPing = Date.now()
+        this.healthCheck = setInterval(() => {
+            if (!this.lastPing) {
+                this.close();
+                return;
+            }
+            if (Date.now() - this.lastPing > 40000) {
+                console.log('No ping in 40 seconds, closing');
+                this.close();
+            }
+        }, 10000);
+
+        // remove old listeners
+        ws.removeAllListeners('message');
+        ws.on('message', this.onMessage.bind(this));
+        this.ws = ws;
+        this.afterReady();
+    }
+
+    onMessage(data: Buffer) {
+        const message = data.toString();
         const commands = parseMessage(message);
         for (const [key, data] of commands) {
             this.router.route(key, data);
@@ -63,6 +182,7 @@ export class Client {
     }
 
     onPing(_: string) {
+        this.lastPing = Date.now();
         this.send('PONG', 'PONG');
     }
 
@@ -78,6 +198,11 @@ export class Client {
     onExists(name: string) {
         // remove from data queue
         this.dataQueue.delete(name);
+    }
+
+    sockError(err: Error) {
+        console.error(`Socket Error: ${err.message}`);
+        this.close();
     }
 
     incomingWall(name: string) {
@@ -134,5 +259,15 @@ export class Client {
             }
         });
         this.router.deleteRoute(name);
+    }
+
+    onError(message: string) {
+        if (message == 'NotFoundError') {
+            this.config.setID('NEWCLIENT');
+            this.config.save();
+            console.log('ID not found, getting new ID');
+        } else {
+            console.log(`Error: ${message}`);
+        }
     }
 }

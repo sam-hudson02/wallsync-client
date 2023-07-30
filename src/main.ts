@@ -5,11 +5,10 @@ import { imageScan } from './utils/folderscan';
 function main() {
     const config = new Config();
     const client = new Client(config);
-    client.connect();
-    // set timeout to upload files after 10 seconds
-    setTimeout(() => {
+    client.afterReady = () => {
         upload(client);
-    }, 1000);
+    }
+    client.start();
 }
 
 function upload(client: Client) {

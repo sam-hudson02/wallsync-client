@@ -19,6 +19,9 @@ export class Wrapper {
         }
         const url = this.baseUrl + endpoint;
         const response = await fetch(url, options);
+        if (response.status !== 200) {
+            throw new Error('Error in API call');
+        }
         const data = await response.json();
         return data;
     }

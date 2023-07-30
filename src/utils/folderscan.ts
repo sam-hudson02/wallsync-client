@@ -1,5 +1,4 @@
 import * as fs from 'fs';
-import * as os from 'os';
 
 // scans a directory and returns a list of images
 export function imageScan(dir: string): string[] {

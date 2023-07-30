@@ -1,10 +1,16 @@
-import { Command } from "commander";
-const program = new Command();
 import { Wrapper } from "../utils/restwrap";
+import { Command } from "commander"
 import { Config } from "../utils/config";
 
+const program = new Command();
 const config = new Config();
 const wrapper = new Wrapper(config.restServer);
+
+type searchResults = {
+    index: number
+    name: string
+    data: string
+}
 
 program
     .name('Wallsync')
@@ -13,13 +19,18 @@ program
 program.command('search')
     .description('search for wallpapers')
     .argument('<string>', 'string to search')
-    .action((searchterm: string) => {
-        wrapper.search(searchterm).then((data: string[]) => {
-            console.log('Results:');
-            data.forEach((element) => {
-                console.log(element);
-            });
-        });
+    .action(async (searchterm: string) => {
+        const data = await wrapper.search(searchterm) as searchResults[]
+        const selection = await selector(data)
+        try {
+            const ind = parseInt(selection)
+            for (const element of data) {
+                if (ind == element.index) {
+                    wrapper.setWallpaper(element.name)
+                }
+            }
+        } catch (e) {
+        }
     });
 
 program.command('set')
@@ -32,3 +43,17 @@ program.command('set')
     });
 
 program.parse();
+
+async function selector(data: searchResults[]): Promise<string> {
+    for (const element of data) {
+        console.log(`${element.index}) ${element.name}`);
+    }
+    console.log('Select wallpaper: ');
+    // get stdin as async iterator
+    const stdin = process.stdin;
+    return new Promise((resolve) => {
+        stdin.on('data', (data) => {
+            resolve(data.toString().trim());
+        });
+    });
+}
