@@ -1,6 +1,7 @@
 import { Wrapper } from "../utils/restwrap";
 import { Command } from "commander"
 import { Config } from "../utils/config";
+import terminalImage from "terminal-image";
 
 const program = new Command();
 const config = new Config();
@@ -47,6 +48,8 @@ program.parse();
 async function selector(data: searchResults[]): Promise<string> {
     for (const element of data) {
         console.log(`${element.index}) ${element.name}`);
+        const buffer = Buffer.from(element.data, 'base64');
+        console.log(await terminalImage.buffer(buffer));
     }
     console.log('Select wallpaper: ');
     // get stdin as async iterator

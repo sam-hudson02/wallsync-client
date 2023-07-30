@@ -45,7 +45,7 @@ export class Config {
     default() {
         return {
             id: 'NEWCLIENT',
-            server: 'ws://localhost:8080',
+            server: 'localhost',
             ws_port: '8080',
             rest_port: '3000',
             name: this.getHostName(),
