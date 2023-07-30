@@ -1,6 +1,6 @@
-import { Config } from '../utils/config';
-import { parseMessage } from '../utils/parser';
-import { Router, Route } from '../utils/router';
+import { Config } from '../utils/config.js';
+import { parseMessage } from '../utils/parser.js';
+import { Router, Route } from '../utils/router.js';
 import { WebSocket } from 'ws';
 import * as fs from 'fs';
 // import way to run command

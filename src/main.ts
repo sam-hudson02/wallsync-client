@@ -1,6 +1,6 @@
-import { Config } from './utils/config';
-import { Client } from './client/client';
-import { imageScan } from './utils/folderscan';
+import { Config } from './utils/config.js';
+import { Client } from './client/client.js';
+import { imageScan } from './utils/folderscan.js';
 
 function main() {
     const config = new Config();
