@@ -11,6 +11,7 @@ export class Config {
     name: string;
     command: string;
     cache: string;
+    sync: string[];
 
     constructor() {
         // read json file
@@ -39,6 +40,7 @@ export class Config {
         this.wsServer = 'ws://' + config.server + ':' + this.ws_port
         this.restServer = 'http://' + config.server + ':' + this.rest_port
         this.name = config.name || this.getHostName();
+        this.sync = config.sync || [];
         this.command = config.command || 'feh --bg-fill $WALL';
     }
 
@@ -48,6 +50,7 @@ export class Config {
             server: 'localhost',
             ws_port: '8080',
             rest_port: '3000',
+            sync: [],
             name: this.getHostName(),
         }
     }

@@ -6,17 +6,19 @@ function main() {
     const config = new Config();
     const client = new Client(config);
     client.afterReady = () => {
-        upload(client);
+        upload(client, config);
     }
     client.start();
 }
 
-function upload(client: Client) {
-    const folder = '/home/sam/.config/wallpapers';
-    const files = imageScan(folder);
-    for (const file of files) {
-        console.log(`Uploading ${file}`);
-        client.sync(file);
+function upload(client: Client, config: Config) {
+    const folders = config.sync;
+    for (const folder of folders) {
+        const files = imageScan(folder);
+        for (const file of files) {
+            console.log(`Uploading ${file}`);
+            client.sync(file);
+        }
     }
 }
 
