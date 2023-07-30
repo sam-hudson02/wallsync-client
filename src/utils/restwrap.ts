@@ -27,21 +27,23 @@ export class Wrapper {
     }
 
 
-    async search(searchTerm: string) {
+    async search(searchTerm: string, clientId: string) {
         const endpoint = '/search';
         const method = 'POST';
         const body = {
-            name: searchTerm
+            name: searchTerm,
+            clientId: clientId
         };
         const data = await this.doCall(endpoint, method, body);
         return data.results;
     }
 
-    async setWallpaper(name: string) {
+    async setWallpaper(name: string, clientId: string) {
         const endpoint = '/setWallpaper';
         const method = 'POST';
         const body = {
-            name: name
+            name: name,
+            clientId: clientId
         };
         const data = await this.doCall(endpoint, method, body);
         return data.name;

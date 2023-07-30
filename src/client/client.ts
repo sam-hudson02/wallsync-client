@@ -43,11 +43,11 @@ export class Client {
                 console.log(`Status: ${this.status}`);
                 if (this.status === 'connected') {
                     tries = 0;
-                } 
+                }
                 if (this.status === 'disconnected') {
                     console.log('Disconnected, breaking');
                     break;
-                } 
+                }
                 await new Promise((resolve) => setTimeout(resolve, 1000));
             }
             console.log(`Connection Closed, status: ${this.status}`);
@@ -116,6 +116,10 @@ export class Client {
         this.afterReady = handler;
     }
 
+    requestActive() {
+        this.send('ACTIVE', 'ACTIVE');
+    }
+
     close() {
         this.lastPing = undefined;
         if (this.healthCheck) {
@@ -160,6 +164,7 @@ export class Client {
         ws.on('message', this.onMessage.bind(this));
         this.ws = ws;
         this.afterReady();
+        this.requestActive();
     }
 
     onMessage(data: Buffer) {

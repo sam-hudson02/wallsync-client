@@ -22,13 +22,13 @@ program.command('search')
     .argument('<string>', 'string to search')
     .action(async (searchterm: string) => {
         const stdin = process.stdin
-        const data = await wrapper.search(searchterm) as searchResults[]
+        const data = await wrapper.search(searchterm, config.id) as searchResults[]
         const selection = await selector(data, stdin)
         try {
             const ind = parseInt(selection)
             for (const element of data) {
                 if (ind == element.index) {
-                    wrapper.setWallpaper(element.name)
+                    wrapper.setWallpaper(element.name, config.id)
                 }
             }
         } catch (e) {
@@ -43,7 +43,7 @@ program.command('set')
     .description('set wallpaper')
     .argument('<string>', 'name of wallpaper')
     .action((name: string) => {
-        wrapper.setWallpaper(name).then((data) => {
+        wrapper.setWallpaper(name, config.id).then((data) => {
             console.log('Wallpaper set to ' + data);
         });
     });
