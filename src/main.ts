@@ -17,7 +17,11 @@ function upload(client: Client, config: Config) {
         const files = imageScan(folder);
         for (const file of files) {
             console.log(`Uploading ${file}`);
-            client.sync(file);
+            let relativePath = file.replace(folder, '');
+            if (relativePath.startsWith('/')) {
+                relativePath = relativePath.substring(1);
+            }
+            client.sync(file, relativePath);
         }
     }
 }

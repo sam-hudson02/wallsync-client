@@ -41,7 +41,6 @@ export class Config {
         this.restServer = 'http://' + config.server + ':' + this.rest_port
         this.name = config.name || this.getHostName();
         this.sync = config.sync || [];
-        console.log(this.sync);
         this.command = config.command || 'feh --bg-fill $WALL';
     }
 

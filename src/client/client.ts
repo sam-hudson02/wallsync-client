@@ -191,13 +191,13 @@ export class Client {
         this.send('PONG', 'PONG');
     }
 
-    onReadyData(name: string) {
-        const data = this.dataQueue.get(name);
+    onReadyData(location: string) {
+        const data = this.dataQueue.get(location);
         if (!data) {
-            console.log(`No data for ${name}`);
+            console.log(`No data for ${location}`);
             return;
         }
-        this.send(name, data);
+        this.send(location, data);
     }
 
     onExists(name: string) {
@@ -210,10 +210,10 @@ export class Client {
         this.close();
     }
 
-    incomingWall(name: string) {
-        console.log(`Received ${name}`);
+    incomingWall(location: string) {
+        console.log(`Received ${location}`);
         // check if exists
-        const file = this.config.cache + '/' + name;
+        const file = this.config.cache + '/' + location;
         if (fs.existsSync(file)) {
             console.log('File already exists, setting as wallpaper');
             // run command
@@ -225,21 +225,21 @@ export class Client {
             console.log('File does not exist, requesting');
             const downloader = this.onData.bind(this);
             const handler = (data: string) => {
-                downloader(data, name);
+                downloader(data, location);
                 exec(this.config.command.replace('$WALL', file));
             };
-            this.router.addRoutes([{ key: name, handler }]);
-            this.send('REQUESTDATA', name);
+            this.router.addRoutes([{ key: location, handler }]);
+            this.send('REQUESTDATA', location);
         }
     }
 
-    sync(file: string) {
+    sync(file: string, location: string) {
         if (!fs.existsSync(file)) {
             console.log('File does not exist');
             return;
         }
 
-        const ext = file.split('.').pop();
+        const ext = location.split('.').pop();
         if (!ext || !['png', 'jpg', 'jpeg'].includes(ext)) {
             console.log('Not an image');
             return;
@@ -247,23 +247,26 @@ export class Client {
 
         const image = fs.readFileSync(file, { encoding: 'base64' });
         const data = image.toString();
-        const name = file.split('/').slice(-1)[0].split('.')[0];
 
-        console.log(`Syncing ${name}.${ext}`);
-        this.send('SYNC', name);
-        this.dataQueue.set(name, data);
+        console.log(`Syncing ${location}`);
+        this.send('SYNC', location);
+        this.dataQueue.set(location, data);
     }
 
-    onData(data: string, name: string) {
+    onData(data: string, location: string) {
         const image = Buffer.from(data, 'base64');
-        const path = this.config.cache + '/' + name;
+        const path = this.config.cache + '/' + location;
+        const dir = path.split('/').slice(0, -1).join('/');
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
         console.log(`Saving image to ${path}`);
         fs.writeFile(path, image, (err) => {
             if (err) {
                 console.error(err);
             }
         });
-        this.router.deleteRoute(name);
+        this.router.deleteRoute(location);
     }
 
     onError(message: string) {

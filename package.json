@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@types/ws": "^8.5.5",
+    "cheerio": "^1.0.0-rc.12",
     "commander": "^11.0.0",
     "terminal-image": "^2.0.0",
     "ws": "^8.13.0"

@@ -1,3 +1,4 @@
+import { Results } from "../cli/types.js";
 
 export class Wrapper {
     baseUrl: string;
@@ -27,7 +28,7 @@ export class Wrapper {
     }
 
 
-    async search(searchTerm: string, clientId: string) {
+    async search(searchTerm: string, clientId: string): Promise<Results[]> {
         const endpoint = '/search';
         const method = 'POST';
         const body = {
@@ -38,7 +39,7 @@ export class Wrapper {
         return data.results;
     }
 
-    async setWallpaper(name: string, clientId: string) {
+    async setWallpaper(name: string, clientId: string): Promise<string> {
         const endpoint = '/setWallpaper';
         const method = 'POST';
         const body = {
@@ -47,5 +48,50 @@ export class Wrapper {
         };
         const data = await this.doCall(endpoint, method, body);
         return data.name;
+    }
+
+    async reddit(url: string, clientId: string): Promise<Results[]> {
+        const endpoint = '/reddit';
+        const method = 'POST';
+        const body = {
+            url: url,
+            clientId: clientId
+        };
+        const data = await this.doCall(endpoint, method, body);
+        return data.results;
+    }
+
+    async random(clientId: string): Promise<string> {
+        const endpoint = '/random';
+        const method = 'POST';
+        const body = {
+            clientId: clientId
+        };
+        const data = await this.doCall(endpoint, method, body);
+        return data.results;
+    }
+
+    async save(name: string, data: string, clientId: string): Promise<string> {
+        const endpoint = '/save';
+        const method = 'POST';
+        const body = {
+            name: name,
+            data: data,
+            clientId: clientId
+        };
+        const response = await this.doCall(endpoint, method, body);
+        return response.name;
+    }
+
+    async download(name: string, url: string, clientId: string): Promise<string> {
+        const endpoint = '/download';
+        const method = 'POST';
+        const body = {
+            name: name,
+            url: url,
+            clientId: clientId
+        };
+        const response = await this.doCall(endpoint, method, body);
+        return response.name;
     }
 }
