@@ -1,86 +1,77 @@
-import { Results } from "./types.js";
-import { display } from "./selector.js";
-import { Wrapper } from "../utils/restwrap.js";
-import { Config } from "../utils/config.js";
+import chalk from "chalk";
+import ora from "ora";
+import rdl from "readline";
+import { Wrapper } from "../utils/restwrap";
+import { Select } from "./selector";
 
 export class Downloader {
-    data: Results[];
-    page: Results[];
-    stdin: NodeJS.ReadStream;
-    start: number;
-    remainder: number;
-    slicelen: number;
-    finished: boolean;
+    url: string;
     wrapper: Wrapper;
-    config: Config;
+    stdin: NodeJS.ReadStream;
+    stdout: NodeJS.WriteStream;
+    id: string;
+    selector: Select;
+    set?: boolean;
 
-    constructor(data: Results[], stdin: NodeJS.ReadStream, wrapper: Wrapper, config: Config) {
-        this.data = data;
-        this.stdin = stdin;
-        this.page = [];
-        this.start = 0;
-        this.remainder = data.length;
-        this.slicelen = data.length < 5 ? data.length : 5;
-        this.finished = false;
+    constructor(url: string, clientId: string, wrapper: Wrapper, selector: Select, set?: boolean) {
+        this.url = url;
+        this.id = clientId;
+        this.set = set;
+        this.stdin = process.stdin;
+        this.stdout = process.stdout;
         this.wrapper = wrapper;
-        this.config = config;
+        this.selector = selector;
+    }
+    async download() {
+        const given = await this.getInput('Enter a name for wallpaper: ');
+        const ext = this.url.split('.').pop();
+        const name = given + '.' + ext;
+        const spinner = ora({
+            text: chalk.blue('Downloading ' + name),
+            discardStdin: false
+        }).start();
+        const location = await this.wrapper.download(name, this.url, this.id);
+        spinner.succeed(chalk.green('Downloaded ' + name + ' to ' + location));
+        await this.setWallpaper(location, name);
+        await this.cleanup();
     }
 
-    async main() {
-        this.page = this.data.slice(this.start, this.start + this.slicelen);
-        let newPage = true;
-        while (!this.finished) {
-            if (newPage) {
-                await display(this.page);
-                newPage = false;
+    async setWallpaper(location: string, name: string) {
+        if (this.set === undefined) {
+            const set = await this.getInput('Set as wallpaper? [y/n]: ');
+            if (set.toLowerCase() === 'y') {
+                const setSpinner = ora({
+                    text: chalk.blue('Setting ' + name + ' as wallpaper'),
+                    discardStdin: false
+                }).start();
+                await this.wrapper.setWallpaper(location, this.id);
+                setSpinner.succeed(chalk.green('Set ' + name + ' as wallpaper'));
             }
-            const input = await getInput('Select wallpaper to download, load more (l) or quit (q):', this.stdin);
-            if (input === 'q') {
-                this.finished = true;
-                return;
-            }
-            if (input === 'l') {
-                await this.nextPage();
-                newPage = true;
-                continue;
-            }
-            await this.download(input);
+        } else if (this.set) {
+            const setSpinner = ora({
+                text: chalk.blue('Setting ' + name + ' as wallpaper'),
+                discardStdin: false
+            }).start();
+            await this.wrapper.setWallpaper(location, this.id);
+            setSpinner.succeed(chalk.green('Set ' + name + ' as wallpaper'));
         }
     }
 
-    async nextPage() {
-        if (this.remainder <= 0) {
-            return;
-        }
-        this.slicelen = this.remainder < 5 ? this.remainder : 5;
-        this.start += this.slicelen;
-        this.remainder -= this.slicelen;
-        if (this.remainder < 5) {
-            this.slicelen = this.remainder;
-        }
-        this.page = this.data.slice(this.start, this.start + this.slicelen);
-    }
-
-    async download(input: string) {
-        const index = parseInt(input);
-        for (const element of this.page) {
-            if (element.index !== index) {
-                continue;
-            }
-            const given = await getInput('Enter a name for wallpaper:', this.stdin);
-            const ext = element.location.split('.').pop();
-            const name = given + '.' + ext;
-            await this.wrapper.download(name, element.location, this.config.id);
-        }
-    }
-}
-
-export async function getInput(promt: string, stdin: NodeJS.ReadStream): Promise<string> {
-    console.log(promt);
-    return new Promise((resolve) => {
-        stdin.on('data', (input) => {
-            resolve(input.toString().trim());
+    async getInput(question: string): Promise<string> {
+        return new Promise((resolve) => {
+            const rdlInter = rdl.createInterface({
+                input: this.stdin,
+                output: this.stdout
+            });
+            rdlInter.question(question, (answer: string) => {
+                rdlInter.close();
+                resolve(answer);
+            });
         });
-    });
-}
+    }
 
+    async cleanup() {
+        this.stdin.removeAllListeners();
+        this.stdout.removeAllListeners();
+    }
+}

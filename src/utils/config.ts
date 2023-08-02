@@ -9,8 +9,10 @@ export class Config {
     wsServer: string;
     restServer: string;
     name: string;
+    sub: string;
     command: string;
     cache: string;
+    kitty: boolean;
     sync: string[];
 
     constructor() {
@@ -40,8 +42,10 @@ export class Config {
         this.wsServer = 'ws://' + config.server + ':' + this.ws_port
         this.restServer = 'http://' + config.server + ':' + this.rest_port
         this.name = config.name || this.getHostName();
+        this.sub = config.sub || 'r/wallpaper';
         this.sync = config.sync || [];
         this.command = config.command || 'feh --bg-fill $WALL';
+        this.kitty = config.kitty || false;
     }
 
     default() {
@@ -52,6 +56,9 @@ export class Config {
             rest_port: '3000',
             sync: [],
             name: this.getHostName(),
+            sub: 'r/wallpaper',
+            command: 'feh --bg-fill $WALL',
+            kitty: false,
         }
     }
 
@@ -75,6 +82,8 @@ export class Config {
                 name: this.name,
                 command: this.command,
                 sync: this.sync,
+                sub: this.sub,
+                kitty: this.kitty,
             },
             null,
             4

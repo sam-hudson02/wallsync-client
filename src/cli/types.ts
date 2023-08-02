@@ -1,5 +1,9 @@
 export type Results = {
-    index: number,
+    title: string,
     location: string,
-    data: string
+    data?: Buffer, 
+    metadata: {
+        width: number,
+        height: number,
+    }
 }

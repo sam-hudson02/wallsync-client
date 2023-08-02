@@ -1,7 +1,7 @@
 import { Config } from "../utils/config.js";
 import { Wrapper } from "../utils/restwrap.js";
-import { selector } from "./selector.js";
-import { Downloader } from "./downloader.js";
+import { Reddit } from "./reddit.js";
+import { Searcher } from "./searcher.js";
 
 export class Commands {
     config: Config
@@ -12,32 +12,14 @@ export class Commands {
         this.wrapper = wrapper
     }
 
-    async reddit(url: string) {
-        const data = await this.wrapper.reddit(url, this.config.id)
-        const stdin = process.stdin
-        const downloader = new Downloader(data, stdin, this.wrapper, this.config)
-        await downloader.main()
-        stdin.removeAllListeners('data')
-        stdin.destroy()
+    async reddit(arg?: string, options?: any) {
+        const redditClient = new Reddit({ arg, options, config: this.config, wrapper: this.wrapper })
+        await redditClient.search()
     }
 
-    async search(query: string) {
-        const stdin = process.stdin
-        const data = await this.wrapper.search(query, this.config.id)
-        const selection = await selector(data, stdin)
-        try {
-            const ind = parseInt(selection)
-            for (const element of data) {
-                if (ind == element.index) {
-                    this.wrapper.setWallpaper(element.location, this.config.id)
-                }
-            }
-        } catch (e) {
-        }
-        console.log('Wallpaper set to ' + selection);
-        stdin.removeAllListeners('data')
-        stdin.destroy()
-        return
+    async search(query: string) {   
+        const searcher = new Searcher({ query, config: this.config, wrapper: this.wrapper })
+        await searcher.search()
     }
 
     async setWallpaper(name: string) {

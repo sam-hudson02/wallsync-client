@@ -19,7 +19,8 @@ program.command('search')
 
 program.command('reddit')
     .description('get wallpapers from reddit')
-    .argument('<string>', 'url of post')
+    .argument('[string]', 'url of post, or subreddit')
+    .option('-s, --sub [string]', 'Subreddit to search')
     .action(commands.reddit.bind(commands));
 
 program.command('set')

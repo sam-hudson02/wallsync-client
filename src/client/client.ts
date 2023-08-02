@@ -39,8 +39,12 @@ export class Client {
             console.log('Attempting to Connect');
             await this.connect();
             console.log('Finished Connecting');
+            let oldStatus = this.status;
             while (true) {
-                console.log(`Status: ${this.status}`);
+                if (oldStatus !== this.status) {
+                    console.log(`Status changed to ${this.status}`);
+                    oldStatus = this.status;
+                }
                 if (this.status === 'connected') {
                     tries = 0;
                 }
