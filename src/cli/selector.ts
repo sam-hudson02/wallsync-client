@@ -108,12 +108,12 @@ export class Select {
             loc = await this.getCursorPos();
             this.locations.set(index, loc);
         }
-        // convert pixels to rows and cols
-        const title = `${index+1}) ${element.title}`;
+
+        // border and title
         this.border(highlight, loc.y - 1);
-        const xt = this.center - Math.floor(title.length / 2);
-        this.stdout.cursorTo(xt, loc.y - 1);
-        this.write(title, highlight);
+        this.writeTitle(element, loc.y - 1, highlight);
+
+        // image
         if (renderImage) {
             let xd;
             if (this.kitty) {
@@ -144,6 +144,17 @@ export class Select {
             }
         }
         this.stdout.cursorTo(0, loc.y + this.boxHeight);
+    }
+
+    writeTitle(element: Results, y: number, highlight: boolean = false) {
+        let base = element.title
+        if (base.length + 6 > this.boxWidth) {
+            base = base.slice(0, this.boxWidth - 9) + '...';
+        }
+        const title = `[ ${base} ]`;
+        const xt = this.center - Math.floor(title.length / 2);
+        this.stdout.cursorTo(xt, y);
+        this.write(title, highlight);
     }
 
     failedImage(y: number) {
