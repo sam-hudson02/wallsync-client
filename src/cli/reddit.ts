@@ -35,7 +35,6 @@ export class Reddit {
             sub = 'r/' + sub
         }
         if (!arg) {
-            // json request
             arg = 'https://www.reddit.com/' + sub + '.json'
         }
         if (!arg.startsWith('https://www.reddit.com/')) {
@@ -101,9 +100,7 @@ export class Reddit {
         const footer = 'Page ' + (this.page + 1) + ' of ' + (Math.ceil(data.length / 3))
         const selector = new Select(page, options, this.config.kitty, footer, this.display)
         // set timeout for 500ms to allow for images to be cached
-        setTimeout(() => {
-            selector.start()
-        }, 500)
+        selector.start()
     }
 
     async previousPage(data: WebImage[]) {
@@ -130,7 +127,7 @@ export class Reddit {
             let result = this.imageCache.get(webResult.full)
             if (!result) {
                 let data = await download(webResult.full)
-                const { width, height } = await prepImage(webResult.aspect, 650, 280)
+                const { width, height } = await prepImage(webResult.aspect, 670, 290)
                 result = {
                     title: webResult.title,
                     location: webResult.full,
