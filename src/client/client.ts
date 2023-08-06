@@ -214,10 +214,14 @@ export class Client {
         this.close();
     }
 
-    incomingWall(location: string) {
-        console.log(`Received ${location}`);
+    incomingWall(id: string) {
+        console.log(`Received ${id}`);
+        if (!this.verifyID(id)) {
+            console.log('Invalid ID');
+            return;
+        }
         // check if exists
-        const file = this.config.cache + '/' + location;
+        const file = this.config.cache + '/' + id;
         if (fs.existsSync(file)) {
             console.log('File already exists, setting as wallpaper');
             // run command
@@ -229,11 +233,12 @@ export class Client {
             console.log('File does not exist, requesting');
             const downloader = this.onData.bind(this);
             const handler = (data: string) => {
-                downloader(data, location);
+                downloader(data, id);
                 exec(this.config.command.replace('$WALL', file));
             };
-            this.router.addRoutes([{ key: location, handler }]);
-            this.send('REQUESTDATA', location);
+            this.config.manageCache();
+            this.router.addRoutes([{ key: id, handler }]);
+            this.send('REQUESTDATA', id);
         }
     }
 
@@ -257,20 +262,26 @@ export class Client {
         this.dataQueue.set(location, data);
     }
 
-    onData(data: string, location: string) {
+    onData(data: string, id: string) {
+        if (!this.verifyID(id)) {
+            console.log(`Invalid ID: ${id}`);
+            this.router.deleteRoute(id);
+            return;
+        }
         const image = Buffer.from(data, 'base64');
-        const path = this.config.cache + '/' + location;
+        const path = this.config.cache + '/' + id;
         const dir = path.split('/').slice(0, -1).join('/');
         if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });
         }
+        fs.writeFileSync(path, image);
         console.log(`Saving image to ${path}`);
-        fs.writeFile(path, image, (err) => {
-            if (err) {
-                console.error(err);
-            }
-        });
-        this.router.deleteRoute(location);
+        this.router.deleteRoute(id);
+    }
+
+    verifyID(id: string) {
+        // regex that matches UUIDs + .jpg, .png, .jpeg
+        return /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[89ab][a-f0-9]{3}-[a-f0-9]{12}\.(jpg|png|jpeg)$/.test(id);
     }
 
     onError(message: string) {

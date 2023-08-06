@@ -5,35 +5,38 @@ import { Wrapper } from "../utils/restwrap";
 import { Select } from "./selector";
 
 export class Downloader {
-    url: string;
     wrapper: Wrapper;
     stdin: NodeJS.ReadStream;
     stdout: NodeJS.WriteStream;
     id: string;
     selector: Select;
     set?: boolean;
+    inter: rdl.Interface;
 
-    constructor(url: string, clientId: string, wrapper: Wrapper, selector: Select, set?: boolean) {
-        this.url = url;
+    constructor(clientId: string, wrapper: Wrapper, selector: Select, set?: boolean) {
         this.id = clientId;
         this.set = set;
         this.stdin = process.stdin;
         this.stdout = process.stdout;
         this.wrapper = wrapper;
         this.selector = selector;
+        this.inter = rdl.createInterface({
+            input: this.stdin,
+            output: this.stdout
+        });
     }
-    async download() {
+
+    async download(url: string) {
         const given = await this.getInput('Enter a name for wallpaper: ');
-        const ext = this.url.split('.').pop();
+        const ext = url.split('.').pop();
         const name = given + '.' + ext;
         const spinner = ora({
             text: chalk.blue('Downloading ' + name),
             discardStdin: false
         }).start();
-        const location = await this.wrapper.download(name, this.url, this.id);
+        const location = await this.wrapper.download(name, url, this.id);
         spinner.succeed(chalk.green('Downloaded ' + name + ' to ' + location));
         await this.setWallpaper(location, name);
-        await this.cleanup();
     }
 
     async setWallpaper(location: string, name: string) {
@@ -59,19 +62,14 @@ export class Downloader {
 
     async getInput(question: string): Promise<string> {
         return new Promise((resolve) => {
-            const rdlInter = rdl.createInterface({
-                input: this.stdin,
-                output: this.stdout
-            });
-            rdlInter.question(question, (answer: string) => {
-                rdlInter.close();
+            this.inter.question(question, (answer: string) => {
                 resolve(answer);
             });
         });
     }
 
     async cleanup() {
-        this.stdin.removeAllListeners();
-        this.stdout.removeAllListeners();
+        this.inter.close();
+        this.stdin.destroy();
     }
 }

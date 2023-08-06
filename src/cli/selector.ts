@@ -73,7 +73,7 @@ export class Select {
     }
 
     async start() {
-        this.clearScreen();
+        this.wipe();
         this.hideCursor();
         this.disableScroll();
         this.stdin.pause();
@@ -86,9 +86,9 @@ export class Select {
         this.stdout.cursorTo(pad, this.height - 1);
         this.write(this.footer, false);
 
+        this.stdin.resume();
         this.stdin.setRawMode(true);
         this.stdin.setEncoding('utf-8');
-        this.stdin.resume();
         this.stdin.on('data', async (input) => {
             await this.commandHandler(input.toString().trim());
         });

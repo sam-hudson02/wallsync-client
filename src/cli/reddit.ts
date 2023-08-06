@@ -6,7 +6,7 @@ import { Results } from "./types.js";
 import { Select } from "./selector.js";
 import { Downloader } from "./downloader.js";
 import { WebImage, download, redditImage } from "./scrape.js";
-import { Display, prepImage } from "../utils/image.js";
+import { Display, prepImage, resize } from "../utils/image.js";
 
 type RedditOptions = {
     arg?: string,
@@ -124,41 +124,43 @@ export class Reddit {
     async getImages(webResults: WebImage[], displayCache: boolean = true) {
         const results: Results[] = []
         for (const webResult of webResults) {
-            let result = this.imageCache.get(webResult.full)
-            if (!result) {
-                let data = await download(webResult.full)
-                const { width, height } = await prepImage(webResult.aspect, 670, 290)
-                result = {
-                    title: webResult.title,
-                    location: webResult.full,
-                    data,
-                    metadata: {
-                        width,
-                        height
+            try {
+                let result = this.imageCache.get(webResult.full)
+                if (!result) {
+                    let raw = await download(webResult.full)
+                    const { width, height } = await prepImage(webResult.aspect, 670, 290)
+                    const data = Buffer.from(await resize(raw!, width, height), 'base64')
+                    result = {
+                        title: webResult.title,
+                        location: webResult.full,
+                        data,
+                        metadata: {
+                            width,
+                            height
+                        }
                     }
-                }
-                this.imageCache.set(webResult.full, result)
-                if (displayCache) {
-                    try {
-                        this.display.addToCache({
+                    this.imageCache.set(webResult.full, result)
+                    if (displayCache) {
+                        await this.display.addToCache({
                             data: result.data,
                             width,
                             height,
                             id: `${webResult.full}-${width}-${height}`
                         })
-                    } catch (e) {
                     }
                 }
+                results.push(result)
+            } catch (e) {
             }
-            results.push(result)
         }
         return results
     }
 
     async download(selected: Results, selector: Select) {
         selector.wipe()
-        const downloader = new Downloader(selected.location, this.config.id, this.wrapper, selector)
-        await downloader.download()
+        const downloader = new Downloader(this.config.id, this.wrapper, selector)
+        await downloader.download(selected.location)
+        await downloader.cleanup()
         selector.start()
     }
 }

@@ -14,6 +14,7 @@ export class Config {
     cache: string;
     kitty: boolean;
     sync: string[];
+    cacheLimit: number = 1000;
 
     constructor() {
         // read json file
@@ -27,9 +28,7 @@ export class Config {
         this._fileLocation = configDir + '/config.json';
         // create config file if it doesn't exist
         if (!fs.existsSync(this._fileLocation)) {
-            console.log('Creating config file');
-            const deafultConfig = this.default();
-            fs.writeFileSync(this._fileLocation, JSON.stringify(deafultConfig));
+            fs.writeFileSync(this._fileLocation, JSON.stringify({}));
         }
         // read config file
         const config = this.read();
@@ -46,20 +45,8 @@ export class Config {
         this.sync = config.sync || [];
         this.command = config.command || 'feh --bg-fill $WALL';
         this.kitty = config.kitty || false;
-    }
-
-    default() {
-        return {
-            id: 'NEWCLIENT',
-            server: 'localhost',
-            ws_port: '8080',
-            rest_port: '3000',
-            sync: [],
-            name: this.getHostName(),
-            sub: 'r/wallpaper',
-            command: 'feh --bg-fill $WALL',
-            kitty: false,
-        }
+        this.cacheLimit = config.cacheLimit || 100;
+        this.save();
     }
 
     setID(id: string) {
@@ -84,6 +71,7 @@ export class Config {
                 sync: this.sync,
                 sub: this.sub,
                 kitty: this.kitty,
+                cacheLimit: this.cacheLimit,
             },
             null,
             4
@@ -93,5 +81,40 @@ export class Config {
     getHostName() {
         // get the system hostname
         return require('os').hostname();
+    }
+
+    manageCache() {
+        // check if cache directory exists
+        if (!fs.existsSync(this.cache)) {
+            console.log('Creating cache directory');
+            fs.mkdirSync(this.cache);
+        }
+        // get all files in cache directory
+        const files = fs.readdirSync(this.cache);
+        const sortedFiles = files.sort((a, b) => {
+            // sort files by date modified
+            return fs.statSync(this.cache + '/' + a).mtime.getTime() - fs.statSync(this.cache + '/' + b).mtime.getTime();
+        });
+        // check if cache is over limit in megabytes
+        while (this.getCacheSize() > this.cacheLimit) {
+            // delete oldest file
+            console.log(`Deleting ${sortedFiles[0]}`);
+            fs.unlinkSync(this.cache + '/' + sortedFiles[0]);
+            // remove file from array
+            sortedFiles.shift();
+        }
+    }
+
+    getCacheSize() {
+        // get all files in cache directory
+        const files = fs.readdirSync(this.cache);
+        // get total size of all files
+        const totalSize = files.reduce((prev, curr) => {
+            return prev + fs.statSync(this.cache + '/' + curr).size;
+        }, 0);
+        // convert to megabytes
+        const mb = totalSize / 1000000;
+        console.log(`Cache size: ${mb} MB`);
+        return mb;
     }
 }

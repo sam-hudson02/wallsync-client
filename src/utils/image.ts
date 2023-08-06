@@ -210,7 +210,7 @@ export async function prepImage(aspect: number, widthMax: number, heightMax: num
     return { width, height };
 }
 
-async function resize(buffer: Buffer, width?: number, height?: number) {
+export async function resize(buffer: Buffer, width?: number, height?: number) {
     // Load the image using canvas
     const img = await loadImage(buffer);
 
