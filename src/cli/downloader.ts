@@ -70,6 +70,7 @@ export class Downloader {
 
     async cleanup() {
         this.inter.close();
-        this.stdin.destroy();
+        this.stdin.removeAllListeners();
+        this.stdout.removeAllListeners();
     }
 }
